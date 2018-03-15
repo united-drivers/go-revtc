@@ -1,14 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"time"
-	"net/http"
-	"golang.org/x/net/html"
-	"github.com/andybalholm/cascadia"
-	"strings"
 	"errors"
+	"fmt"
+	"github.com/andybalholm/cascadia"
+	"golang.org/x/net/html"
+	"net/http"
 	"net/url"
+	"strings"
+	"time"
 )
 
 const baseUrl = "https://registre-vtc.developpement-durable.gouv.fr/public"
@@ -26,7 +26,7 @@ const (
 )
 
 const (
-	legalEntityTypeOther      APILegalEntityType = iota
+	legalEntityTypeOther APILegalEntityType = iota
 	legalEntityTypeCompany
 	legalEntityTypeIndividual
 )
@@ -113,10 +113,8 @@ func mapCompanyType(inputValue string) APIBusinessEntityType {
 		businessEntityTypeSAS:  "Société par actions simplifiée",
 		businessEntityTypeSA:   "Société anonyme",
 		businessEntityTypeSARL: "Société à responsabilité limitée",
-		businessEntityTypeSASU:
-		"Société par actions simplifiée unipersonnelle",
-		businessEntityTypeEURL:
-		"Entreprise unipersonnelle à responsabilité limitée",
+		businessEntityTypeSASU: "Société par actions simplifiée unipersonnelle",
+		businessEntityTypeEURL: "Entreprise unipersonnelle à responsabilité limitée",
 	}
 
 	for key, value := range mapping {
@@ -257,22 +255,22 @@ func GetByAdvancedSearch(params map[APISearchParams]string) (APIResult, error) {
 		"%s/rechercheExploitant.avancee.action", baseUrl)
 
 	resp, err := http.PostForm(requestUrl, url.Values{
-		"rechercheCriteres.numeroInscription": {params[sRegistrationNumber]},
-		"rechercheCriteres.nomRepresentantLegal": {""},
-		"rechercheCriteres.nomDenomination": {""},
-		"rechercheCriteres.numeroSiren": {params[sCompanyNumber]},
-		"rechercheCriteres.sigle": {""},
-		"rechercheCriteres.marque": {""},
-		"rechercheCriteres.autreFormeJuridique": {""},
-		"rechercheCriteres.idFormeJuridique": {""},
-		"rechercheCriteres.ville": {""},
-		"rechercheCriteres.idPays": {""},
-		"rechercheCriteres.codePostal": {""},
-		"rechercheCriteres.idRegion": {""},
-		"rechercheCriteres.idDepartement": {""},
+		"rechercheCriteres.numeroInscription":              {params[sRegistrationNumber]},
+		"rechercheCriteres.nomRepresentantLegal":           {""},
+		"rechercheCriteres.nomDenomination":                {""},
+		"rechercheCriteres.numeroSiren":                    {params[sCompanyNumber]},
+		"rechercheCriteres.sigle":                          {""},
+		"rechercheCriteres.marque":                         {""},
+		"rechercheCriteres.autreFormeJuridique":            {""},
+		"rechercheCriteres.idFormeJuridique":               {""},
+		"rechercheCriteres.ville":                          {""},
+		"rechercheCriteres.idPays":                         {""},
+		"rechercheCriteres.codePostal":                     {""},
+		"rechercheCriteres.idRegion":                       {""},
+		"rechercheCriteres.idDepartement":                  {""},
 		"action:/public/rechercheExploitant.liste.avancee": {"Rechercher"},
 	})
-	
+
 	if err != nil {
 		return APIResult{}, err
 	}
@@ -280,16 +278,14 @@ func GetByAdvancedSearch(params map[APISearchParams]string) (APIResult, error) {
 	return handleSingleResultPage(resp)
 }
 
-
 func GetByCompanyNumber(companyNumber string) (APIResult, error) {
-	return GetByAdvancedSearch(map[APISearchParams]string {
+	return GetByAdvancedSearch(map[APISearchParams]string{
 		sCompanyNumber: companyNumber,
 	})
 }
 
-
 func GetByRegistrationNumber(registrationNumber string) (APIResult, error) {
-	return GetByAdvancedSearch(map[APISearchParams]string {
+	return GetByAdvancedSearch(map[APISearchParams]string{
 		sRegistrationNumber: registrationNumber,
 	})
 }
