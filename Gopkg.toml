@@ -6,6 +6,10 @@
   branch = "master"
   name = "golang.org/x/net"
 
+[[constraint]]
+  version = "v1.2"
+  name = "github.com/gin-gonic/gin"
+
 [prune]
   go-tests = true
   unused-packages = true
