@@ -154,8 +154,8 @@ func mapDictToObject(mapped map[string]string) APIResult {
 
 	if result.legalEntityType == legalEntityTypeCompany {
 		result.company.name = mapped[lCompanyName]
-		result.company.acronym = mapped[lCompanyName]
-		result.company.brand = mapped[lCompanyName]
+		result.company.acronym = mapped[lAcronym]
+		result.company.brand = mapped[lBrand]
 		result.company.contact.firstName = mapped[lContactFirstName]
 		result.company.contact.lastName = mapped[lContactLastName]
 		result.company.companyType = castAPIBusinessEntityType(mapped[lCompanyType])
