@@ -13,11 +13,10 @@ import (
 
 const baseUrl = "https://registre-vtc.developpement-durable.gouv.fr/public"
 
-type APIEnum int
-type APIPersonTitle APIEnum
-type APILegalEntityType APIEnum
-type APIBusinessEntityType APIEnum
-type APISearchParams APIEnum
+type APIPersonTitle int
+type APILegalEntityType int
+type APIBusinessEntityType int
+type APISearchParams int
 
 const (
 	personTitleOther APIPersonTitle = iota
@@ -66,11 +65,15 @@ const (
 )
 
 type APIResultAddress struct {
-	postalCode, city, country, department string
+	postalCode string
+	city       string
+	country    string
+	department string
 }
 
 type APIPersonName struct {
-	lastName, firstName string
+	lastName  string
+	firstName string
 }
 
 type APIResultIndividual struct {
@@ -79,66 +82,61 @@ type APIResultIndividual struct {
 }
 
 type APIResultCompany struct {
-	name, acronym, brand string
-	contact              APIPersonName
-	companyType          APIBusinessEntityType
+	name        string
+	acronym     string
+	brand       string
+	contact     APIPersonName
+	companyType APIBusinessEntityType
 }
 
 type APIResult struct {
-	legalEntityType                   APILegalEntityType
-	companyNumber, registrationNumber string
-	expirationDate                    time.Time
-	address                           APIResultAddress
-	individual                        APIResultIndividual
-	company                           APIResultCompany
+	legalEntityType    APILegalEntityType
+	companyNumber      string
+	registrationNumber string
+	expirationDate     time.Time
+	address            APIResultAddress
+	individual         APIResultIndividual
+	company            APIResultCompany
 }
 
-func mapPersonTitle(inputValue string) APIPersonTitle {
-	mapping := map[APIPersonTitle]string{
-		personTitleMr:  "M.",
-		personTitleMrs: "Mme",
-	}
+var personTitleMapping = []string{
+	personTitleMr:  "M.",
+	personTitleMrs: "Mme",
+}
 
+var businessEntityTypeMapping = []string{
+	businessEntityTypeSAS:  "Société par actions simplifiée",
+	businessEntityTypeSA:   "Société anonyme",
+	businessEntityTypeSARL: "Société à responsabilité limitée",
+	businessEntityTypeSASU: "Société par actions simplifiée unipersonnelle",
+	businessEntityTypeEURL: "Entreprise unipersonnelle à responsabilité limitée",
+}
+
+var legalEntityTypeMapping = []string{
+	legalEntityTypeCompany:    "Personne morale",
+	legalEntityTypeIndividual: "Personne physique",
+}
+
+func getKeyForMappingValue(mapping []string, inputValue string, defaultValue int) int {
 	for key, value := range mapping {
 		if value == inputValue {
 			return key
 		}
 	}
 
-	return personTitleOther
+	return defaultValue
 }
 
-func mapCompanyType(inputValue string) APIBusinessEntityType {
-	mapping := map[APIBusinessEntityType]string{
-		businessEntityTypeSAS:  "Société par actions simplifiée",
-		businessEntityTypeSA:   "Société anonyme",
-		businessEntityTypeSARL: "Société à responsabilité limitée",
-		businessEntityTypeSASU: "Société par actions simplifiée unipersonnelle",
-		businessEntityTypeEURL: "Entreprise unipersonnelle à responsabilité limitée",
-	}
-
-	for key, value := range mapping {
-		if value == inputValue {
-			return key
-		}
-	}
-
-	return businessEntityTypeOther
+func castAPIPersonTitle(str string) APIPersonTitle {
+	return APIPersonTitle(getKeyForMappingValue(personTitleMapping, str, int(personTitleOther)))
 }
 
-func mapLegalEntityType(inputValue string) APILegalEntityType {
-	mapping := map[APILegalEntityType]string{
-		legalEntityTypeCompany:    "Personne morale",
-		legalEntityTypeIndividual: "Personne physique",
-	}
+func castAPIBusinessEntityType(str string) APIBusinessEntityType {
+	return APIBusinessEntityType(getKeyForMappingValue(businessEntityTypeMapping, str, int(businessEntityTypeOther)))
+}
 
-	for key, value := range mapping {
-		if value == inputValue {
-			return key
-		}
-	}
-
-	return legalEntityTypeOther
+func castAPILegalEntityType(str string) APILegalEntityType {
+	return APILegalEntityType(getKeyForMappingValue(legalEntityTypeMapping, str, int(legalEntityTypeOther)))
 }
 
 func mapDictToObject(mapped map[string]string) APIResult {
@@ -152,7 +150,7 @@ func mapDictToObject(mapped map[string]string) APIResult {
 	result.address.postalCode = mapped[lPostalCode]
 	result.address.department = mapped[lDepartment]
 
-	result.legalEntityType = mapLegalEntityType(mapped[lLegalEntityType])
+	result.legalEntityType = castAPILegalEntityType(mapped[lLegalEntityType])
 
 	if result.legalEntityType == legalEntityTypeCompany {
 		result.company.name = mapped[lCompanyName]
@@ -160,12 +158,12 @@ func mapDictToObject(mapped map[string]string) APIResult {
 		result.company.brand = mapped[lCompanyName]
 		result.company.contact.firstName = mapped[lContactFirstName]
 		result.company.contact.lastName = mapped[lContactLastName]
-		result.company.companyType = mapCompanyType(mapped[lCompanyType])
+		result.company.companyType = castAPIBusinessEntityType(mapped[lCompanyType])
 		result.company.brand = mapped[lBrand]
 		result.company.acronym = mapped[lAcronym]
 
 	} else if result.legalEntityType == legalEntityTypeIndividual {
-		result.individual.title = mapPersonTitle(mapped[lIndividualTitle])
+		result.individual.title = castAPIPersonTitle(mapped[lIndividualTitle])
 		result.individual.name.firstName = mapped[lIndividualFirstName]
 		result.individual.name.lastName = mapped[lIndividualLastName]
 	}
