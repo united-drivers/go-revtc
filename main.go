@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/andybalholm/cascadia"
 	"github.com/gin-gonic/gin"
+	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
+	pb "github.com/united-drivers/go-revtc/proto"
 	"golang.org/x/net/html"
 	"net/http"
 	"net/url"
@@ -14,31 +16,7 @@ import (
 
 const baseUrl = "https://registre-vtc.developpement-durable.gouv.fr/public"
 
-type APIPersonTitle int
-type APILegalEntityType int
-type APIBusinessEntityType int
 type APISearchParams int
-
-const (
-	personTitleOther APIPersonTitle = iota
-	personTitleMr
-	personTitleMrs
-)
-
-const (
-	legalEntityTypeOther APILegalEntityType = iota
-	legalEntityTypeCompany
-	legalEntityTypeIndividual
-)
-
-const (
-	businessEntityTypeOther APIBusinessEntityType = iota
-	businessEntityTypeSA
-	businessEntityTypeSARL
-	businessEntityTypeSAS
-	businessEntityTypeSASU
-	businessEntityTypeEURL
-)
 
 const (
 	lCompanyName         = "Dénomination"
@@ -72,90 +50,22 @@ const (
 	sDepartment
 )
 
-type APIResultAddress struct {
-	PostalCode string `json:"postal_code,omitempty"`
-	City       string `json:"city,omitempty"`
-	Country    string `json:"country,omitempty"`
-	Department string `json:"department,omitempty"`
-}
-
-type APIPersonName struct {
-	LastName  string `json:"last_name,omitempty"`
-	FirstName string `json:"first_name,omitempty"`
-}
-
-type APIResultIndividual struct {
-	Title APIPersonTitle `json:"title,omitempty"`
-	Name  APIPersonName  `json:"name,omitempty"`
-}
-
-type APIResultCompany struct {
-	Name        string                `json:"name,omitempty"`
-	Acronym     string                `json:"acronym,omitempty"`
-	Brand       string                `json:"brand,omitempty"`
-	Contact     APIPersonName         `json:"contact,omitempty"`
-	CompanyType APIBusinessEntityType `json:"company_type,omitempty"`
-}
-
-type APIResult struct {
-	LegalEntityType    APILegalEntityType  `json:"legal_entity_type"`
-	CompanyNumber      string              `json:"company_number"`
-	RegistrationNumber string              `json:"registration_number"`
-	ExpirationDate     time.Time           `json:"expiration_date"`
-	Address            APIResultAddress    `json:"address"`
-	Individual         APIResultIndividual `json:"individual,omitempty"`
-	Company            APIResultCompany    `json:"company,omitempty"`
-}
-
 var personTitleMapping = []string{
-	personTitleMr:  "M.",
-	personTitleMrs: "Mme",
+	pb.PERSON_TITLE_PERSON_TITLE_MR:  "M.",
+	pb.PERSON_TITLE_PERSON_TITLE_MRS: "Mme",
 }
 
 var businessEntityTypeMapping = []string{
-	businessEntityTypeSA:   "Société anonyme",
-	businessEntityTypeSARL: "Société à responsabilité limitée",
-	businessEntityTypeSAS:  "Société par actions simplifiée",
-	businessEntityTypeSASU: "Société par actions simplifiée unipersonnelle",
-	businessEntityTypeEURL: "Entreprise unipersonnelle à responsabilité limitée",
+	pb.BUSINESS_ENTITY_TYPE_BUSINESS_ENTITY_TYPE_SA:   "Société anonyme",
+	pb.BUSINESS_ENTITY_TYPE_BUSINESS_ENTITY_TYPE_SARL: "Société à responsabilité limitée",
+	pb.BUSINESS_ENTITY_TYPE_BUSINESS_ENTITY_TYPE_SAS:  "Société par actions simplifiée",
+	pb.BUSINESS_ENTITY_TYPE_BUSINESS_ENTITY_TYPE_SASU: "Société par actions simplifiée unipersonnelle",
+	pb.BUSINESS_ENTITY_TYPE_BUSINESS_ENTITY_TYPE_EURL: "Entreprise unipersonnelle à responsabilité limitée",
 }
 
 var legalEntityTypeMapping = []string{
-	legalEntityTypeCompany:    "Personne morale",
-	legalEntityTypeIndividual: "Personne physique",
-}
-
-var personTitleJSON = []string{
-	personTitleOther: "OTHER",
-	personTitleMr:    "MR",
-	personTitleMrs:   "MRS",
-}
-
-var businessEntityTypeJSON = []string{
-	businessEntityTypeOther: "OTHER",
-	businessEntityTypeSA:    "SA",
-	businessEntityTypeSARL:  "SARL",
-	businessEntityTypeSAS:   "SAS",
-	businessEntityTypeSASU:  "SASU",
-	businessEntityTypeEURL:  "EURL",
-}
-
-var legalEntityTypeJSON = []string{
-	legalEntityTypeOther:      "OTHER",
-	legalEntityTypeCompany:    "COMPANY",
-	legalEntityTypeIndividual: "INDIVIDUAL",
-}
-
-func (value APIPersonTitle) MarshalText() ([]byte, error) {
-	return []byte(personTitleJSON[value]), nil
-}
-
-func (value APILegalEntityType) MarshalText() ([]byte, error) {
-	return []byte(legalEntityTypeJSON[value]), nil
-}
-
-func (value APIBusinessEntityType) MarshalText() ([]byte, error) {
-	return []byte(businessEntityTypeJSON[value]), nil
+	pb.LEGAL_ENTITY_TYPE_LEGAL_ENTITY_TYPE_COMPANY:    "Personne morale",
+	pb.LEGAL_ENTITY_TYPE_LEGAL_ENTITY_TYPE_INDIVIDUAL: "Personne physique",
 }
 
 func getKeyForMappingValue(mapping []string, inputValue string, defaultValue int) int {
@@ -168,69 +78,77 @@ func getKeyForMappingValue(mapping []string, inputValue string, defaultValue int
 	return defaultValue
 }
 
-func castAPIPersonTitle(str string) APIPersonTitle {
-	return APIPersonTitle(getKeyForMappingValue(personTitleMapping, str, int(personTitleOther)))
+func castAPIPersonTitle(str string) pb.PERSON_TITLE {
+	return pb.PERSON_TITLE(getKeyForMappingValue(personTitleMapping, str, int(pb.PERSON_TITLE_PERSON_TITLE_OTHER)))
 }
 
-func castAPIBusinessEntityType(str string) APIBusinessEntityType {
-	return APIBusinessEntityType(getKeyForMappingValue(businessEntityTypeMapping, str, int(businessEntityTypeOther)))
+func castAPIBusinessEntityType(str string) pb.BUSINESS_ENTITY_TYPE {
+	return pb.BUSINESS_ENTITY_TYPE(getKeyForMappingValue(businessEntityTypeMapping, str, int(pb.BUSINESS_ENTITY_TYPE_BUSINESS_ENTITY_TYPE_OTHER)))
 }
 
-func castAPILegalEntityType(str string) APILegalEntityType {
-	return APILegalEntityType(getKeyForMappingValue(legalEntityTypeMapping, str, int(legalEntityTypeOther)))
+func castAPILegalEntityType(str string) pb.LEGAL_ENTITY_TYPE {
+	return pb.LEGAL_ENTITY_TYPE(getKeyForMappingValue(legalEntityTypeMapping, str, int(pb.LEGAL_ENTITY_TYPE_LEGAL_ENTITY_TYPE_OTHER)))
 }
 
-func mapDictToObject(mapped map[string]string) APIResult {
-	var result APIResult
-
-	result.CompanyNumber = mapped[lCompanyNumber]
-	result.RegistrationNumber = mapped[lRegistrationNumber]
-
-	result.Address.City = mapped[lCity]
-	result.Address.Country = mapped[lCountry]
-	result.Address.PostalCode = mapped[lPostalCode]
-	result.Address.Department = mapped[lDepartment]
-
-	result.LegalEntityType = castAPILegalEntityType(mapped[lLegalEntityType])
-
-	if result.LegalEntityType == legalEntityTypeCompany {
-		result.Company.Name = mapped[lCompanyName]
-		result.Company.Acronym = mapped[lAcronym]
-		result.Company.Brand = mapped[lBrand]
-		result.Company.Contact.FirstName = mapped[lContactFirstName]
-		result.Company.Contact.LastName = mapped[lContactLastName]
-		result.Company.CompanyType = castAPIBusinessEntityType(mapped[lCompanyType])
-		result.Company.Brand = mapped[lBrand]
-		result.Company.Acronym = mapped[lAcronym]
-
-	} else if result.LegalEntityType == legalEntityTypeIndividual {
-		result.Individual.Title = castAPIPersonTitle(mapped[lIndividualTitle])
-		result.Individual.Name.FirstName = mapped[lIndividualFirstName]
-		result.Individual.Name.LastName = mapped[lIndividualLastName]
+func mapDictToObject(mapped map[string]string) pb.VTCEntry {
+	var result = pb.VTCEntry{
+		CompanyNumber:      mapped[lCompanyNumber],
+		RegistrationNumber: mapped[lRegistrationNumber],
+		LegalEntityType:    castAPILegalEntityType(mapped[lLegalEntityType]),
 	}
 
-	fmt.Println(mapped[lExpirationDate])
+	result.Address = &pb.Address{
+		City:       mapped[lCity],
+		Country:    mapped[lCountry],
+		PostalCode: mapped[lPostalCode],
+		Department: mapped[lDepartment],
+	}
 
-	result.ExpirationDate, _ = time.Parse(
-		"02/01/2006", mapped[lExpirationDate])
+	if result.LegalEntityType == pb.LEGAL_ENTITY_TYPE_LEGAL_ENTITY_TYPE_COMPANY {
+		result.Company = &pb.Company{
+			Name:    mapped[lCompanyName],
+			Acronym: mapped[lAcronym],
+			Contact: &pb.PersonName{
+				FirstName: mapped[lContactFirstName],
+				LastName:  mapped[lContactLastName],
+			},
+			CompanyType: castAPIBusinessEntityType(mapped[lCompanyType]),
+			Brand:       mapped[lBrand],
+		}
+
+	} else if result.LegalEntityType == pb.LEGAL_ENTITY_TYPE_LEGAL_ENTITY_TYPE_INDIVIDUAL {
+		result.Individual = &pb.Individual{
+			Title: castAPIPersonTitle(mapped[lIndividualTitle]),
+			Name: &pb.PersonName{
+				FirstName: mapped[lIndividualFirstName],
+				LastName:  mapped[lIndividualLastName],
+			},
+		}
+	}
+
+	expirationDate, _ := time.Parse("02/01/2006", mapped[lExpirationDate])
+	result.ExpirationDate = &google_protobuf.Timestamp{
+		Seconds: int64(expirationDate.Second()),
+		Nanos:   int32(expirationDate.Nanosecond()),
+	}
 
 	return result
 }
 
-func handleSingleResultPage(res *http.Response) (APIResult, error) {
+func handleSingleResultPage(res *http.Response) (pb.VTCEntry, error) {
 	if res.StatusCode != 200 {
-		return APIResult{}, errors.New("not found")
+		return pb.VTCEntry{}, errors.New("not found")
 	}
 
 	doc, errHtml := html.Parse(res.Body)
 	sel, errCss := cascadia.Compile(".cLabel")
 
 	if errHtml != nil {
-		return APIResult{}, errHtml
+		return pb.VTCEntry{}, errHtml
 	}
 
 	if errCss != nil {
-		return APIResult{}, errCss
+		return pb.VTCEntry{}, errCss
 	}
 
 	mapped := map[string]string{}
@@ -251,7 +169,7 @@ func handleSingleResultPage(res *http.Response) (APIResult, error) {
 	}
 
 	if mapped[lCompanyNumber] == "" {
-		return APIResult{}, errors.New("not found")
+		return pb.VTCEntry{}, errors.New("not found")
 	}
 
 	return mapDictToObject(mapped), nil
@@ -275,7 +193,7 @@ func getTextToken(node *html.Node) string {
 	return ""
 }
 
-func GetByRecordId(recordId int) (APIResult, error) {
+func GetByRecordId(recordId int) (pb.VTCEntry, error) {
 	var requestUrl = fmt.Sprintf(
 		"%s/rechercheExploitant.exploitantDetails.action?dossier.id=%d",
 		baseUrl, recordId)
@@ -283,13 +201,13 @@ func GetByRecordId(recordId int) (APIResult, error) {
 	resp, err := http.Get(requestUrl)
 
 	if err != nil {
-		return APIResult{}, err
+		return pb.VTCEntry{}, err
 	}
 
 	return handleSingleResultPage(resp)
 }
 
-func GetByAdvancedSearch(params map[APISearchParams]string) (APIResult, error) {
+func GetByAdvancedSearch(params map[APISearchParams]string) (pb.VTCEntry, error) {
 	var requestUrl = fmt.Sprintf(
 		"%s/rechercheExploitant.avancee.action", baseUrl)
 
@@ -311,19 +229,19 @@ func GetByAdvancedSearch(params map[APISearchParams]string) (APIResult, error) {
 	})
 
 	if err != nil {
-		return APIResult{}, err
+		return pb.VTCEntry{}, err
 	}
 
 	return handleSingleResultPage(resp)
 }
 
-func GetByCompanyNumber(companyNumber string) (APIResult, error) {
+func GetByCompanyNumber(companyNumber string) (pb.VTCEntry, error) {
 	return GetByAdvancedSearch(map[APISearchParams]string{
 		sCompanyNumber: companyNumber,
 	})
 }
 
-func GetByRegistrationNumber(registrationNumber string) (APIResult, error) {
+func GetByRegistrationNumber(registrationNumber string) (pb.VTCEntry, error) {
 	return GetByAdvancedSearch(map[APISearchParams]string{
 		sRegistrationNumber: registrationNumber,
 	})

@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package revtc;
+
+enum PERSON_TITLE {
+    PERSON_TITLE_OTHER = 0;
+    PERSON_TITLE_MR = 1;
+    PERSON_TITLE_MRS = 2;
+};
+
+
+enum LEGAL_ENTITY_TYPE {
+    LEGAL_ENTITY_TYPE_OTHER = 0;
+    LEGAL_ENTITY_TYPE_COMPANY = 1;
+    LEGAL_ENTITY_TYPE_INDIVIDUAL = 2;
+};
+
+enum BUSINESS_ENTITY_TYPE {
+    BUSINESS_ENTITY_TYPE_OTHER = 0;
+    BUSINESS_ENTITY_TYPE_SA = 1;
+    BUSINESS_ENTITY_TYPE_SARL = 2;
+    BUSINESS_ENTITY_TYPE_SAS = 3;
+    BUSINESS_ENTITY_TYPE_SASU = 4;
+    BUSINESS_ENTITY_TYPE_EURL = 5;
+};
+
+
+message Address {
+    string postal_code = 1;
+    string city = 2;
+    string country = 3;
+    string department = 4;
+};
+
+message PersonName {
+    string last_name = 1;
+    string first_name = 2;
+}
+
+message Individual {
+    PERSON_TITLE title = 1;
+    PersonName name = 2;
+}
+
+message Company {
+    string name = 1;
+    string acronym = 2;
+    string brand = 3;
+    PersonName contact = 4;
+    BUSINESS_ENTITY_TYPE company_type = 5;
+}
+
+message VTCEntry {
+    LEGAL_ENTITY_TYPE legal_entity_type = 1;
+    string company_number = 2;
+
+    string registration_number = 3;
+    google.protobuf.Timestamp expiration_date = 4;
+
+    Address            address = 5;
+    Individual         individual = 6;
+    Company            company = 7;
+}
+
+message SimpleInput {
+    string input = 1;
+}
+
+
+service ReVTC {
+    rpc GetBySIREN(SimpleInput) returns (VTCEntry) {}
+}
