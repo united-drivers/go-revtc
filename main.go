@@ -3,15 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/andybalholm/cascadia"
 	"github.com/gin-gonic/gin"
 	google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
 	pb "github.com/united-drivers/go-revtc/proto"
 	"golang.org/x/net/html"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 const baseUrl = "https://registre-vtc.developpement-durable.gouv.fr/public"
@@ -131,7 +133,6 @@ func mapDictToObject(mapped map[string]string) pb.VTCEntry {
 		Seconds: int64(expirationDate.Second()),
 		Nanos:   int32(expirationDate.Nanosecond()),
 	}
-
 	return result
 }
 
@@ -172,6 +173,7 @@ func handleSingleResultPage(res *http.Response) (pb.VTCEntry, error) {
 		return pb.VTCEntry{}, errors.New("not found")
 	}
 
+	fmt.Println("mapped", mapped)
 	return mapDictToObject(mapped), nil
 }
 
@@ -261,7 +263,9 @@ func httpSimpleSearch(c *gin.Context, searchType APISearchParams) {
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	str, _ := marshaler.MarshalToString(&result)
+	c.SetHeader("Content-Type", "application/json")
+	c.String(http.StatusOK, result)
 }
 
 func httpSearchByRegNumber(c *gin.Context) {
@@ -278,5 +282,5 @@ func main() {
 	r.GET("/registration_number/:input", httpSearchByRegNumber)
 	r.GET("/company_number/:input", httpSearchByCompanyNumber)
 
-	r.Run() // listen and serve on 0.0.0.0:8080
+	r.Run(":" + os.Getenv("PORT")) // listen and serve on 0.0.0.0:8080
 }
